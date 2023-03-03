@@ -1,0 +1,194 @@
+---
+title: "amica QC Report"
+date: '`r format(Sys.Date(), "%Y-%B-%d")`'
+output: html_document
+params:
+  amicaInput: NA
+  isPilot: NA
+  analysisParams: NA
+  daTool: NA
+  numberOfProteins: NA
+  quantifiedProteins: NA
+  numberOfComparisons: NA
+  numberOfGroups: NA
+  lfqAvail: NA
+  ibaqAvail: NA
+  numid: NA
+  contaminants: NA
+  missingvals: NA
+  lfqPCA: NA
+  impPCA: NA
+  lfqBoxplot: NA
+  impBoxplot: NA
+  lfqDensityPlot: NA
+  impDensityPlot: NA
+  lfqCvBox: NA
+  impCvBox: NA
+  lfqCorrPlot: NA
+  impCorrPlot: NA
+---
+
+
+## 1 Analysis parameters 
+
+
+```{r, param-summary, echo=FALSE}
+if (params$amicaInput) {
+  paste("No analysis parameters accessible")
+} else {
+  datatable(
+      params$analysisParams,
+      caption = "Summary of analysis parameters used",
+      rownames = F,
+      extensions = 'Buttons',
+      
+      options = list(
+        pageLength = 12,
+        autoWidth = TRUE,
+        dom = 'Bfrtip',
+        buttons = list(list(
+          extend = 'csv',
+          filename = paste0('parameter_summary_', Sys.Date())
+        ))
+      )
+    )
+}
+```
+
+### 1.2 Summary
+
+Number of proteins in uploaded file: **`r params$numberOfProteins`**.
+
+Number of quantified proteins: **`r params$quantifiedProteins`**.
+
+Number of groups in experimental design: **`r params$numberOfGroups`**.
+
+Number of pairwise group comparisons performed: **`r params$numberOfComparisons`**.
+
+
+## 2 QC plots
+
+**LFQIntensity** or **Intensity** are intensities that still contain missing 
+values and potential contaminants. These intensities are used to calculate the 
+fraction of missing data or the number of identified protein groups in a sample.
+If the data was quantified with MaxQuant or FragPipe these intensities are 
+already normalized.
+
+**ImputedIntensity** are normalized and imputed intensities that are also used to 
+calculate differential abundance. If the re-normalization option was selected 
+in the input tab the LFQIntensities were normalized after removing potential 
+contaminants, reverse hits, proteins only identified by site and protein groups 
+that had too few valid values per group.
+
+### 2.1 Number of identified proteins (based on LFQ intensities prior to filtering and imputation)
+```{r, num-ids, echo=FALSE, error=TRUE}
+if (!params$lfqAvail) {
+  print("No LFQIntensities available for this plot.")
+} else {
+  params$numid
+
+}
+```
+
+### 2.2 Percentages of contamination (based on iBAQ intensities)
+
+The percentage of contaminants is calculated with the iBAQ (Intensity based Absolute Quantification) values and shows the percentage of total signal from potential contaminants.
+
+```{r, contaminants, echo=FALSE, error=TRUE}
+if (!params$ibaqAvail) {
+  print("No iBAQ intensities available for this plot.")
+} else {
+  params$contaminants
+}
+```
+
+### 2.3 Percentages of missing values (based on LFQ intensities prior to filtering and imputation)
+```{r, missing-vals, echo=FALSE, error=TRUE}
+if (!params$lfqAvail) {
+  print("No LFQIntensities available for this plot.")
+} else {
+  params$missingvals
+}
+```
+
+### 2.4 PCA
+```{r, pca-side, fig.show="hold", out.width="50%", echo=FALSE}
+params$lfqPCA
+params$impPCA
+```
+
+### 2.5 Intensity Boxplots
+
+Box plots show the distribution of selected intensities which gives an overview about their similarities.
+
+```{r, boxplots-side, fig.show="hold", out.width="50%", echo=FALSE}
+params$lfqBoxplot
+params$impBoxplot
+```
+
+### 2.6 Intensity density plots
+
+The density plot shows a smoothed version of a histogram. It is especially useful to compare density plots of the intensities before and after imputation. 
+
+```{r, densityplot-side, fig.show="hold", out.width="50%",echo=FALSE}
+params$lfqDensityPlot
+params$impDensityPlot
+```
+
+### 2.7 CV boxplots
+
+The Coefficient of Variation (CV) gets calculated by the standard deviation of replicates divided by their mean per protein, which gives an estimate on the reproducibility of the experiment.
+
+```{r, cv-boxplots-side, fig.show="hold", results='asis', out.width="50%", echo=FALSE}
+if (params$isPilot) {
+  cat("\n\n**Cannot output CV-plots for pilots without replicates.**\n\n")
+} else {
+  print(params$lfqCvBox)
+  print(params$impCvBox)
+}
+```
+
+
+```{r, corr-plots, echo=FALSE, results='asis'}
+
+idx <- 1
+if (!params$amicaInput &&
+    !params$isPilot) idx <- 2
+
+cat(paste0("\n\n### 2.8 Correlation plots\n\n"))
+
+cat(paste0("\n\nThe interactive pearson correlation plot [",idx, "] visualizes how well samples (e.g replicates) correlate.\n\n"))
+
+params$lfqCorrPlot
+params$impCorrPlot
+```
+
+
+## 3 References
+
+```{r, references, echo=FALSE, results='asis'}
+if (!params$amicaInput) {
+  
+  if (!params$isPilot) {
+    limmaText <- 'Ritchie, Matthew E., et al. "limma powers
+         differential expression analyses for RNA-sequencing and microarray
+         studies." Nucleic acids research 43.7 (2015): e47-e47.'
+    deqmsText <- 'Zhu, Yafeng, et al. "DEqMS: a method for accurate
+         variance estimation in differential protein expression analysis."
+         Molecular & Cellular Proteomics 19.6 (2020): 1047-1057.'
+    
+    if (params$daTool == "limma") {
+      cat(paste0("\n\n[1] ", limmaText, "\n\n"))
+    } else {
+      cat(paste0("\n\n[1] ", deqmsText, "\n\n"))
+    }
+  }
+}
+heatmaplyText <- 'Galili, Tal, et al. "heatmaply: an R
+         package for creating interactive cluster heatmaps for online
+         publishing." Bioinformatics 34.9 (2018): 1600-1602.'
+cat(paste0("\n\n[", idx, "] ",  heatmaplyText, "\n\n"))
+
+```
+
+
